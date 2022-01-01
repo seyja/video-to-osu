@@ -18,3 +18,7 @@ now you can play the map (it might take some time to load)
 
 
 preview: https://cdn.discordapp.com/attachments/747495246513832036/925429431525335060/ba.mp4
+
+
+
+I recommend using HD, 9AR, >7CS
