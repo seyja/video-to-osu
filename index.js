@@ -1,64 +1,151 @@
 const fs = require("fs");
-const {fps,filePath}=require("./config.json")
-const {spawn}=require("child_process");
-let t=new Date().getTime()/1000
+const { fps, filePath } = require("./config.json");
+const { spawn } = require("child_process");
 
-fs.rmSync("./frames", { recursive: true, force: true })
-fs.rmSync("./output", { recursive: true, force: true })
-fs.mkdirSync("./frames")
-fs.mkdirSync("./output")
-console.log("hold on...")
+const startTime = new Date().getTime() / 1000;
 
-const cp=spawn("ffmpeg",["-i",filePath,"-filter:v","fps="+fps,"frames/%d.png"]);
+// Remove existing frames and output
+fs.rmSync("./frames", { recursive: true, force: true });
+fs.rmSync("./output", { recursive: true, force: true });
 
-cp.on("close",()=>{
-    spawn("img2ascii").on("close",()=>{
-        let q=""
-        const s=fs.readdirSync("./output/").sort((a,b)=>(a.match(/\d+/)[0]-0)<(b.match(/\d+/)[0]-0)?-1:1)
-        
-        s.forEach((i,o)=>{
-            let w = [];
-            const h = fs.readFileSync("output/"+i).toString();
-            function clear(h) {
-                const arr = [...h];
-                let ll = h.match("(.+\n)")?.[1].length || h.length;
-            let d = "";
-            arr.forEach((char, b) => {
-                if (char == " ") {
-                    d += " ";
-                    return;
-                }
-                if (arr[b - 1] == char && arr[b - 1 - ll] == char && arr[b - ll] == char && arr[b + ll] == char && arr[b + 1] == char && arr[b + 1 + ll] == char) {
-                    d += " ";
-                    return;
-                }
-        
-                d += char;
-            });
-            return d;
-        }
-        
-        let f = [...clear(h)];
-        const pos = {};
-        ll = (f.join("").match("(.+\n)")?.[1].length || h.length);
-        let y = 1;
-        
-        f.forEach((a, b) => {
-            pos[b] = [3 * (b % ll + 2) + 1, y * 5];
-            if (a == "\n") y++;
-        });
-        f.forEach((arr, p) => {
-        
-            if (arr != " " && arr != "\n" && arr != "\r") {
-                w.push(pos[p]);
-            }
-            
-        });
-        q+="\n"+w.map((a) => a + ","+o*(1000/fps)+",1,0,0:0:0:0:").join("\n");
-        
-        })        
-        fs.writeFileSync("output.txt", q);
-        console.log("done in "+((new Date().getTime()/1000)-t)+" seconds")
-        console.log("create a map (100bpm) and then copy the output.txt file and paste it under [HitObjects]")
-    })
-})
+// Create new frames and output
+fs.mkdirSync("./frames");
+fs.mkdirSync("./output");
+
+console.log("Hold on...");
+
+// Spawn a child process to extract frames from the video using FFmpeg
+const cp = spawn("ffmpeg", [
+	"-i",
+	filePath,
+	"-filter:v",
+	"fps=" + fps,
+	"frames/%d.png",
+]);
+
+// Once frames are extracted, spawn another child process to convert frames to ASCII art using img2ascii
+cp.on("close", () => {
+	const img2asciiProcess = spawn("img2ascii");
+	img2asciiProcess.on("close", () => {
+		//osu format
+
+		let q = `osu file format v14
+[General]
+AudioFilename: audio.mp3
+AudioLeadIn: 0
+PreviewTime: -1
+Countdown: 0
+SampleSet: None
+StackLeniency: 0.7
+Mode: 0
+LetterboxInBreaks: 0
+WidescreenStoryboard: 0
+[Editor]
+DistanceSpacing: 2.6
+BeatDivisor: 16
+GridSize: 4
+TimelineZoom: 1
+[Metadata]
+Title:bad apple
+TitleUnicode:bad apple
+Artist:amogus
+ArtistUnicode:amogus
+Creator:o_init
+Version:visualisation
+Source:urmom
+Tags:bad apple shit map touhou circles art
+BeatmapID:3389374
+BeatmapSetID:1660266
+[Difficulty]
+HPDrainRate:5
+CircleSize:7
+OverallDifficulty:0
+ApproachRate:9
+SliderMultiplier:1.4
+SliderTickRate:1
+[Events]
+//Background and Video events
+//Break Periods
+//Storyboard Layer 0 (Background)
+//Storyboard Layer 1 (Fail)
+//Storyboard Layer 2 (Pass)
+//Storyboard Layer 3 (Foreground)
+//Storyboard Layer 4 (Overlay)
+//Storyboard Sound Samples
+[TimingPoints]
+0,600,4,1,0,100,1,0
+[HitObjects]
+`;
+
+		const frames = fs
+			.readdirSync("./output/")
+			.sort(
+				(a, b) => parseInt(a.match(/\d+/)[0]) - parseInt(b.match(/\d+/)[0]),
+			);
+
+		frames.forEach((frame, index) => {
+			let w = [];
+			const asciiArt = fs.readFileSync("output/" + frame).toString();
+
+			// keep only the borders of the ASCII art
+			function clear(asciiArt) {
+				const asciiArr = [...asciiArt];
+				let lineLength =
+					asciiArt.match("(.+\n)")?.[1].length || asciiArt.length;
+				let clearedAscii = "";
+				asciiArr.forEach((char, index) => {
+					if (char === " ") {
+						clearedAscii += " ";
+						return;
+					}
+					if (
+						asciiArr[index - 1] === char &&
+						asciiArr[index - 1 - lineLength] === char &&
+						asciiArr[index - lineLength] === char &&
+						asciiArr[index + lineLength] === char &&
+						asciiArr[index + 1] === char &&
+						asciiArr[index + 1 + lineLength] === char
+					) {
+						clearedAscii += " ";
+						return;
+					}
+					clearedAscii += char;
+				});
+				return clearedAscii;
+			}
+
+			let asciiChars = [...clear(asciiArt)];
+			const positions = {};
+			let lineLength =
+				asciiChars.join("").match("(.+\n)")?.[1].length || asciiArt.length;
+			let y = 1;
+
+			asciiChars.forEach((char, index) => {
+				positions[index] = [3 * ((index % lineLength) + 2) + 1, y * 5];
+				if (char === "\n") y++;
+			});
+
+			asciiChars.forEach((char, index) => {
+				if (char !== " " && char !== "\n" && char !== "\r") {
+					w.push(positions[index]);
+				}
+			});
+
+			q +=
+				"\n" +
+				w
+					.map((pos) => pos + "," + index * (1000 / fps) + ",1,0,0:0:0:0:")
+					.join("\n");
+		});
+
+		// Write the output to a file
+		fs.writeFileSync("output.txt", q);
+
+		console.log(
+			"Done in " + (new Date().getTime() / 1000 - startTime) + " seconds",
+		);
+		console.log(
+			"Create a map (bpm doesn't matter) and then copy the output.txt file and paste it under [HitObjects]",
+		);
+	});
+});
